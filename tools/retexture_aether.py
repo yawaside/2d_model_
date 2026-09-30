@@ -37,8 +37,14 @@ def load_part(name):
     im = key_magenta(Image.open(os.path.join(ROOT, 'parts', name + '.png')))
     im = im.crop(im.getchannel('A').getbbox())
     a = np.asarray(im).astype(np.float32) / 255.0
-    a[..., :3] *= a[..., 3:4]                     # premultiply
-    return a
+    # the magenta key leaves hard, stair-stepped alpha edges: bleed the colour
+    # outwards and soften the alpha by ~1 px so outlines come out anti-aliased
+    solid = a[..., 3] > 0.5
+    _, (iy, ix) = ndi.distance_transform_edt(~solid, return_indices=True)
+    rgb = a[iy, ix, :3]
+    alpha = ndi.gaussian_filter(a[..., 3], 0.9)
+    alpha = np.clip((alpha - 0.5) * 1.6 + 0.5, 0, 1)
+    return np.dstack([rgb * alpha[..., None], alpha]).astype(np.float32)
 
 class Src:
     """A sticker placed on the model canvas.
@@ -90,26 +96,31 @@ def build_sources():
     P = {n: load_part(n) for n in ['face_base', 'hair', 'eye', 'brow', 'mouth_open',
                                    'torso', 'arm']}
     S = {}
-    # head: skull centre (229, 0) -> head3 top; ears/neck come along.  The rig's
-    # head meshes (11 + back layer 15) lean a little to the left towards the jaw,
-    # so the skull is sized/centred such that its whole silhouette stays inside
-    # their union (checked numerically: 0 skull px outside).
-    S['face'] = Src(P['face_base'], (229, 0), (800, 237), 1.48, 1.45)
-    S['hair'] = Src(P['hair'], (217, 0), (800, 144), 1.68)
-    S['torso'] = Src(P['torso'], (335, 0), (800, 1058), 0.91)
+    # The Neko rig is a big-head bust; the Wardogs character is a chibi with a
+    # much smaller head than the rig's head meshes.  HEAD_K shrinks the head
+    # (face + hair) inside those meshes so head : torso looks like the original
+    # art.  Eyes / brows / mouth stay at the rig's fixed mesh positions.
+    # The head meshes (11 + back layer 15) lean a little to the left towards the
+    # jaw; HEAD_K / top / centre were checked numerically so that the whole skull
+    # silhouette stays inside their union (0 skull px outside).
+    K, top = HEAD_K, 354
+    S['face'] = Src(P['face_base'], (229, 0), (800, top), 1.48 * K, 1.45 * K)
+    S['hair'] = Src(P['hair'], (217, 0), (800, top - 93 * K - 24), 1.68 * K)
+    S['torso'] = Src(P['torso'], (335, 0), (795, 985), 0.915)
     # arms hang straight down at the sides (the rig's PawOff pose)
-    S['armR'] = Src(P['arm'], (101, 0), (560, 1068), 0.64)
-    S['armL'] = Src(P['arm'], (101, 0), (1040, 1068), 0.64, mirror=True)
+    S['armR'] = Src(P['arm'], (101, 0), (557, 995), 0.645)
+    S['armL'] = Src(P['arm'], (101, 0), (1033, 995), 0.645, mirror=True)
     # eye sticker is the screen-right eye; the UV islands belong to the
     # screen-left eye (right eye = mirrored mesh; only the iris is a plain
     # translated copy, so everything is centred on the mesh centre x=664 to stay
     # symmetric) -> mirror the sticker.
-    S['eye'] = Src(P['eye'], (244, 134), (664, 692), 0.36, mirror=True)
-    S['brow'] = Src(P['brow'], (218, 91), (645, 575), 0.42, 0.27, mirror=True)
+    S['eye'] = Src(P['eye'], (244, 134), (664, 692), 0.32, mirror=True)
+    S['brow'] = Src(P['brow'], (218, 91), (654, 577), 0.38, 0.30, mirror=True)
     S['mouth_open'] = Src(P['mouth_open'], (263, 266), (798.5, 840.5), 0.30, 0.21)
     return S
 
 IRIS_C, IRIS_R = (244.0, 134.0), 121.0
+HEAD_K = 0.80
 
 # ---------------------------------------------------------------- painters --
 # every painter gets X, Y (canvas px per texel) and ref (original atlas RGBA,
@@ -128,7 +139,7 @@ def lash_mask(S, X, Y, stroke):
     d = np.hypot(u - IRIS_C[0], v - IRIS_C[1])
     lum = rgb @ np.array([0.3, 0.5, 0.2])
     dark = smooth(0.42 - lum, 0.0, 0.14)                # near-black ink only
-    outside = smooth(d, IRIS_R + 1, IRIS_R + 5)
+    outside = smooth(d, IRIS_R - 3, IRIS_R + 1)
     in_stroke = (u > 420) & (v > 100)
     sel = in_stroke if stroke else ~in_stroke
     return rgb, a * dark * outside * sel
@@ -143,10 +154,10 @@ def P_iris(S, X, Y, ref):
     s = S['eye']; rgb, a = straight(s.sample(X, Y))
     u, v = s.uv(X, Y)
     d = np.hypot(u - IRIS_C[0], v - IRIS_C[1])
-    return rgb, a * (1 - smooth(d, IRIS_R - 2, IRIS_R + 1))
+    return rgb, a * (1 - smooth(d, IRIS_R + 2, IRIS_R + 5))
 
 def P_eyewhite(S, X, Y, ref):
-    cx, cy, rx, ry = 664.0, 694.0, 55.0, 50.0
+    cx, cy, rx, ry = 664.0, 699.0, 49.0, 42.0
     e = np.hypot((X - cx) / rx, (Y - cy) / ry)
     a = 1 - smooth(e, 0.94, 1.0)
     t = smooth((Y - (cy - ry)) / (2 * ry), 0.0, 0.55)[:, None]
@@ -165,7 +176,7 @@ def P_lip(S, X, Y, ref):
     red = smooth(ref[:, 0] - ref[:, 1], 0.24, 0.40)[:, None]
     ink = np.array([0.17, 0.09, 0.08])
     rgb = rgb * (1 - red) + ink * red
-    return rgb, ref[:, 3]
+    return rgb, smooth(ref[:, 3], 0.35, 0.92)
 
 def P_mouth_in(S, X, Y, ref):
     rgb, a = straight(S['mouth_open'].sample(X, Y))
