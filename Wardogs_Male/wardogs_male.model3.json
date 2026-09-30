@@ -1,0 +1,96 @@
+{
+	"Version": 3,
+	"FileReferences": {
+		"Moc": "wardogs_male.moc3",
+		"Textures": [
+			"wardogs_male.4096/texture_00.png"
+		],
+		"Physics": "wardogs_male.physics3.json",
+		"DisplayInfo": "wardogs_male.cdi3.json",
+		"Expressions": [
+			{
+				"Name": "EyeClose",
+				"File": "Expression/EyeClose.exp3.json"
+			},
+			{
+				"Name": "EyeSmile",
+				"File": "Expression/EyeSmile.exp3.json"
+			},
+			{
+				"Name": "MouthOpen",
+				"File": "Expression/MouthOpen.exp3.json"
+			},
+			{
+				"Name": "MouthSmile",
+				"File": "Expression/MouthSmile.exp3.json"
+			},
+			{
+				"Name": "MouthFrown",
+				"File": "Expression/MouthFrown.exp3.json"
+			},
+			{
+				"Name": "BrowDown",
+				"File": "Expression/BrowDown.exp3.json"
+			},
+			{
+				"Name": "BrowUp",
+				"File": "Expression/BrowUp.exp3.json"
+			},
+			{
+				"Name": "ArmCross",
+				"File": "Expression/ArmCross.exp3.json"
+			},
+			{
+				"Name": "Salute",
+				"File": "Expression/Salute.exp3.json"
+			}
+		]
+	},
+	"Groups": [
+		{
+			"Target": "Parameter",
+			"Name": "Head",
+			"Ids": ["ParamAngleX", "ParamAngleY", "ParamAngleZ"]
+		},
+		{
+			"Target": "Parameter",
+			"Name": "Body",
+			"Ids": ["ParamBodyAngleX", "ParamBodyAngleY", "ParamBodyAngleZ", "ParamBreath"]
+		},
+		{
+			"Target": "Parameter",
+			"Name": "Eyes",
+			"Ids": ["ParamEyeLOpen", "ParamEyeROpen", "ParamEyeSmile", "ParamEyeBallX", "ParamEyeBallY"]
+		},
+		{
+			"Target": "Parameter",
+			"Name": "Brows",
+			"Ids": ["ParamBrowLY", "ParamBrowRY", "ParamBrowLAngle", "ParamBrowRAngle", "ParamBrowLForm", "ParamBrowRForm"]
+		},
+		{
+			"Target": "Parameter",
+			"Name": "Mouth",
+			"Ids": ["ParamMouthForm", "ParamMouthOpenY"]
+		},
+		{
+			"Target": "Parameter",
+			"Name": "Arms",
+			"Ids": ["ParamArmLX", "ParamArmLY", "ParamArmLZ", "ParamArmRX", "ParamArmRY", "ParamArmRZ", "ParamHandL", "ParamHandR", "ParamFingerL", "ParamFingerR"]
+		},
+		{
+			"Target": "Parameter",
+			"Name": "Physics",
+			"Ids": ["ParamHairX", "ParamHairY", "ParamHairX2", "ParamHairY2", "ParamScarfX", "ParamScarfY", "ParamVestX", "ParamVestY", "ParamAccX", "ParamAccY"]
+		}
+	],
+	"HitAreas": [
+		{
+			"Id": "Head",
+			"Name": "Head"
+		},
+		{
+			"Id": "Body",
+			"Name": "Body"
+		}
+	]
+}

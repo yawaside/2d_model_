@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WARDOGS // Male Chibi — Live2D Model Viewer</title>
+<style>
+  :root{--bg:#0e1116;--panel:#151a21;--panel2:#1b222c;--line:#2a3442;--txt:#cfd6de;--dim:#7d8a99;--gold:#c8aa5e;--red:#b8452f;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--txt);font-family:Consolas,Menlo,monospace;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+  header{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;background:linear-gradient(180deg,#161c24,#10141a);}
+  header .logo{font-weight:bold;letter-spacing:2px;color:var(--gold);font-size:15px;} header .logo b{color:var(--red);}
+  header .sub{color:var(--dim);font-size:11px;}
+  .chips{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;}
+  .chip{font-size:10px;padding:3px 8px;border:1px solid var(--line);border-radius:3px;color:var(--dim);background:#10151c;}
+  .chip.ok{color:#8fbf6f;border-color:#3c5232;} .chip.warn{color:#d8a24a;border-color:#5a4a2a;}
+  main{flex:1;display:flex;min-height:0;}
+  #stage{flex:1;position:relative;min-width:0;background:radial-gradient(ellipse at 50% 30%,#1a212b 0%,#12161d 55%,#0b0e12 100%);}
+  #cv{position:absolute;inset:0;width:100%;height:100%;}
+  #hud{position:absolute;left:12px;top:10px;font-size:10px;color:var(--dim);line-height:1.7;pointer-events:none;text-shadow:0 1px 2px #000;}
+  #hud b{color:var(--gold);}
+  #panel{width:390px;border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0;}
+  #panel .ph{padding:10px 12px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:1px;color:var(--gold);}
+  #scroll{overflow-y:auto;flex:1;padding:10px 12px 30px;}
+  #scroll::-webkit-scrollbar{width:8px;} #scroll::-webkit-scrollbar-thumb{background:#2b3543;border-radius:4px;}
+  .row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;}
+  .sec{font-size:10px;color:var(--dim);letter-spacing:1px;margin:6px 0 6px;border-bottom:1px solid var(--line);padding-bottom:3px;}
+  button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);font-family:inherit;font-size:11px;padding:6px 9px;cursor:pointer;border-radius:3px;transition:all .12s;}
+  button:hover{border-color:var(--gold);color:var(--gold);}
+  button.active{background:#3a3120;border-color:var(--gold);color:var(--gold);}
+  button.tgl.on{background:#24331f;border-color:#5a7a48;color:#9fc77f;}
+  #lipMeter{width:90px;height:8px;background:#222b36;border:1px solid var(--line);border-radius:2px;overflow:hidden;}
+  #lipMeter i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#5a7a48,#c8aa5e,#b8452f);}
+  .grp{border:1px solid var(--line);border-radius:4px;margin-bottom:8px;background:#131920;}
+  .grp>h3{font-size:11px;letter-spacing:1px;padding:7px 10px;cursor:pointer;color:var(--dim);display:flex;justify-content:space-between;user-select:none;}
+  .grp>h3:hover{color:var(--gold);} .grp .body{padding:2px 10px 8px;display:none;} .grp.open .body{display:block;} .grp.open>h3{color:var(--gold);}
+  .prm{display:grid;grid-template-columns:96px 1fr 44px;gap:8px;align-items:center;padding:3px 0;font-size:10px;}
+  .prm label{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .prm output{text-align:right;color:var(--gold);font-size:10px;}
+  input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:#2b3543;border-radius:2px;outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:2px;background:var(--gold);cursor:pointer;border:1px solid #000;}
+  .prm.auto input[type=range]::-webkit-slider-thumb{background:#7c8a58;}
+  .note{font-size:10px;color:var(--dim);line-height:1.6;border:1px dashed var(--line);padding:8px;border-radius:4px;margin-top:12px;}
+  .note b{color:var(--gold);}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">WAR<b>DOGS</b> // MALE_CHIBI</div>
+  <div class="sub">Live2D model · texture-layer rig · lip sync · waist-up · arms at seams</div>
+  <div class="chips" id="chips"></div>
+</header>
+<main>
+  <div id="stage"><canvas id="cv"></canvas><div id="hud"></div></div>
+  <div id="panel">
+    <div class="ph">RIG CONTROL — WARDOGS_MALE</div>
+    <div id="scroll">
+      <div class="sec">EXPRESSIONS</div>
+      <div class="row" id="exprBtns"></div>
+      <div class="sec">LIP SYNC</div>
+      <div class="row">
+        <button id="bDemo">▶ DEMO TALK</button>
+        <button id="bMic">🎤 MIC</button>
+        <button id="bFile">📁 AUDIO</button>
+        <input type="file" id="fAudio" accept="audio/*" style="display:none">
+        <div id="lipMeter"><i></i></div>
+      </div>
+      <div class="sec">MODE</div>
+      <div class="row">
+        <button class="tgl on" id="tIdle">IDLE ANIM</button>
+        <button class="tgl on" id="tFollow">MOUSE FOLLOW</button>
+        <button class="tgl on" id="tPhys">PHYSICS</button>
+        <button id="bReset">RESET</button>
+      </div>
+      <div class="sec">PARAMETERS (cdi3.json)</div>
+      <div id="groups"></div>
+      <div class="note">
+        Renders the layered art of <b>wardogs_male.psd</b> (разрезка) packed into
+        <b>texture_00.png</b>; rig pivots and layer rects come from <b>atlas_map.json</b>.
+        Lip sync drives <b>ParamMouthOpenY</b> from audio amplitude (demo voice / mic / file).
+        Binary <b>.moc3</b> mesh is compiled from the same PSD in Cubism Editor.
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t, R=Math.PI/180;
+const BASE='../Wardogs_Male/';
+let CDI=null,MODEL=null,PHYS=null,EXPRS={},AMAP=null,PIV=null,TEX=null;
+const P={},sliders={},idleOwned={};
+let idleOn=true,followOn=true,physOn=true,exprTarget={},exprW={};
+const chipsEl=$('#chips');
+const chip=(t,c)=>{const d=document.createElement('div');d.className='chip '+(c||'');d.textContent=t;chipsEl.appendChild(d);};
+
+async function loadAll(){
+  const E=window.EMBED;
+  const gj=async p=> E&&E.json[p]? JSON.parse(E.json[p]) : (await fetch(BASE+p)).json();
+  try{
+    CDI=await gj('wardogs_male.cdi3.json'); chip('cdi3 ✓','ok');
+    MODEL=await gj('wardogs_male.model3.json'); chip('model3 ✓','ok');
+    PHYS=await gj('wardogs_male.physics3.json'); chip('physics3 ✓','ok');
+    for(const e of MODEL.FileReferences.Expressions) EXPRS[e.Name]=await gj(e.File);
+    chip(Object.keys(EXPRS).length+' expr ✓','ok');
+    AMAP=await gj('wardogs_male.4096/atlas_map.json'); PIV=AMAP.pivots;
+    const src= E&&E.tex ? 'data:image/png;base64,'+E.tex : BASE+'wardogs_male.4096/texture_00.png';
+    TEX=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});
+    chip('atlas ✓','ok');
+  }catch(e){chip('LOAD FAIL','warn');console.error(e);}
+}
+
+/* ------------ UI ------------ */
+function buildUI(){
+  for(const p of CDI.Parameters) P[p.Id]=p.Default;
+  ['ParamAngleX','ParamAngleY','ParamAngleZ','ParamEyeBallX','ParamEyeBallY','ParamBreath'].forEach(id=>idleOwned[id]=true);
+  const eb=$('#exprBtns');
+  Object.keys(EXPRS).forEach(n=>{const b=document.createElement('button');b.textContent=n;
+    b.onclick=()=>{exprTarget[n]=exprTarget[n]?0:1;b.classList.toggle('active',!!exprTarget[n]);};eb.appendChild(b);});
+  const bc=document.createElement('button');bc.textContent='CLEAR';
+  bc.onclick=()=>{exprTarget={};eb.querySelectorAll('button').forEach(b=>b.classList.remove('active'));};eb.appendChild(bc);
+
+  const gw=$('#groups');
+  CDI.ParameterGroups.forEach((g,gi)=>{
+    const div=document.createElement('div');div.className='grp'+(gi<3?' open':'');
+    const h=document.createElement('h3');h.innerHTML=g.Name+'<span>▾</span>';h.onclick=()=>div.classList.toggle('open');
+    const body=document.createElement('div');body.className='body';
+    CDI.Parameters.filter(p=>p.Group===g.Id).forEach(p=>{
+      const row=document.createElement('div');row.className='prm';
+      const lab=document.createElement('label');lab.textContent=p.Name;lab.title=p.Id;
+      const inp=document.createElement('input');inp.type='range';inp.min=p.Minimum;inp.max=p.Maximum;
+      inp.step=(p.Maximum-p.Minimum)/200;inp.value=p.Default;
+      const out=document.createElement('output');out.textContent=(+p.Default).toFixed(2);
+      inp.oninput=()=>{P[p.Id]=+inp.value;out.textContent=(+inp.value).toFixed(2);if(idleOwned[p.Id])idleOwned[p.Id]=(p.Id==='ParamBreath');};
+      sliders[p.Id]={inp,out,row};row.append(lab,inp,out);body.appendChild(row);
+    });
+    div.append(h,body);gw.appendChild(div);
+  });
+  $('#tIdle').onclick=e=>{idleOn=!idleOn;e.target.classList.toggle('on',idleOn);};
+  $('#tFollow').onclick=e=>{followOn=!followOn;e.target.classList.toggle('on',followOn);
+    if(followOn)['ParamAngleX','ParamAngleY','ParamAngleZ','ParamEyeBallX','ParamEyeBallY'].forEach(id=>idleOwned[id]=true);};
+  $('#tPhys').onclick=e=>{physOn=!physOn;e.target.classList.toggle('on',physOn);};
+  $('#bReset').onclick=()=>{CDI.Parameters.forEach(p=>P[p.Id]=p.Default);exprTarget={};
+    $('#exprBtns').querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    ['ParamAngleX','ParamAngleY','ParamAngleZ','ParamEyeBallX','ParamEyeBallY','ParamBreath'].forEach(id=>idleOwned[id]=true);};
+
+  /* lip sync buttons */
+  $('#bDemo').onclick=()=>{lipMode(lipSrc==='demo'?'off':'demo');};
+  $('#bMic').onclick=async()=>{lipMode(lipSrc==='mic'?'off':'mic');};
+  $('#bFile').onclick=()=>$('#fAudio').click();
+  $('#fAudio').onchange=e=>{const f=e.target.files[0];if(f)lipMode('file',f);};
+}
+
+/* ------------ lip sync ------------ */
+let AC=null,analyser=null,td=null,lipSrc='off',lipLevel=0,demoNode=null,micStream=null,fileNode=null;
+function ensureAC(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();
+  analyser=AC.createAnalyser();analyser.fftSize=1024;td=new Float32Array(analyser.fftSize);}}
+function stopNodes(){ if(demoNode){try{demoNode.stop()}catch(e){} demoNode=null;}
+  if(fileNode){try{fileNode.stop()}catch(e){} fileNode=null;}
+  if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;} }
+function makeDemoBuffer(){
+  const sr=AC.sampleRate, dur=6, n=sr*dur|0, buf=AC.createBuffer(1,n,sr), d=buf.getChannelData(0);
+  let ph1=0,ph2=0,env=0,seg=0,segLen=0;
+  for(let i=0;i<n;i++){
+    if(segLen<=0){segLen=(0.08+Math.random()*0.22)*sr;seg=Math.random()<0.82?1:0;}
+    segLen--;
+    const target=seg?(0.5+0.5*Math.random()):0;
+    env+= (target-env)*0.002;
+    const f1=95+Math.sin(i/sr*5.1)*18, f2=210+Math.sin(i/sr*3.7)*40;
+    ph1+=f1/sr; ph2+=f2/sr;
+    const saw=(ph1%1)*2-1, saw2=(ph2%1)*2-1, nz=Math.random()*2-1;
+    d[i]=(saw*0.5+saw2*0.22+nz*0.18)*env*0.6;
+  }
+  return buf;
+}
+async function lipMode(mode,file){
+  ensureAC(); await AC.resume(); stopNodes(); lipSrc=mode;
+  $('#bDemo').classList.toggle('active',mode==='demo');
+  $('#bMic').classList.toggle('active',mode==='mic');
+  $('#bFile').classList.toggle('active',mode==='file');
+  if(mode==='demo'){ demoNode=AC.createBufferSource(); demoNode.buffer=makeDemoBuffer(); demoNode.loop=true;
+    demoNode.connect(analyser); analyser.connect(AC.destination); demoNode.start(); }
+  else if(mode==='mic'){ try{ micStream=await navigator.mediaDevices.getUserMedia({audio:true});
+      const s=AC.createMediaStreamSource(micStream); s.connect(analyser); }
+    catch(e){ chip('MIC DENIED','warn'); lipSrc='off'; $('#bMic').classList.remove('active'); } }
+  else if(mode==='file'&&file){ const ab=await file.arrayBuffer(); const abuf=await AC.decodeAudioData(ab);
+    fileNode=AC.createBufferSource(); fileNode.buffer=abuf; fileNode.loop=true;
+    fileNode.connect(analyser); analyser.connect(AC.destination); fileNode.start(); }
+  if(mode==='off'){ try{analyser.disconnect()}catch(e){} }
+}
+function sampleLip(dt){
+  if(lipSrc==='off'||!analyser){lipLevel*=Math.exp(-dt*12);return;}
+  analyser.getFloatTimeDomainData(td);
+  let s=0; for(let i=0;i<td.length;i+=2) s+=td[i]*td[i];
+  const rms=Math.sqrt(s/(td.length/2));
+  const v=clamp(rms*5.5,0,1);
+  lipLevel=v>lipLevel? v : lipLevel*Math.exp(-dt*9);
+}
+
+/* ------------ expressions ------------ */
+function blendExpr(v,id){
+  for(const n in EXPRS){const w=exprW[n];if(!w)continue;
+    for(const op of EXPRS[n].Parameters){if(op.Id!==id)continue;const b=op.Blend||'Add';
+      if(b==='Add')v+=op.Value*w; else if(b==='Multiply')v*=lerp(1,op.Value,w); else v=lerp(v,op.Value,w);}}
+  return v;
+}
+
+/* ------------ physics ------------ */
+let hairA=0,hairV=0,prevHead=0;
+
+/* ------------ stage ------------ */
+const cv=$('#cv'),ctx=cv.getContext('2d');
+let W=0,H=0,DPR=1,mx=.5,my=.42;
+function resize(){DPR=Math.min(devicePixelRatio||1,2);W=$('#stage').clientWidth;H=$('#stage').clientHeight;cv.width=W*DPR;cv.height=H*DPR;}
+addEventListener('resize',resize);
+$('#stage').addEventListener('mousemove',e=>{const r=$('#stage').getBoundingClientRect();mx=(e.clientX-r.left)/r.width;my=(e.clientY-r.top)/r.height;});
+
+function drawL(name,alpha){
+  const r=AMAP.layers[name]; if(!r)return;
+  if(alpha!==undefined)ctx.globalAlpha=alpha;
+  ctx.drawImage(TEX,r.x,r.y,r.w,r.h,r.x,r.y,r.w,r.h);
+  ctx.globalAlpha=1;
+}
+function piv(px,py,rot,sx,sy,fn){ctx.save();ctx.translate(px,py);if(rot)ctx.rotate(rot);ctx.scale(sx,sy);ctx.translate(-px,-py);fn();ctx.restore();}
+
+let lastTs=0,fps=60,blinkT=2.5,blinkV=1;
+function frame(ts){
+  requestAnimationFrame(frame);
+  if(!CDI||!AMAP)return;
+  const dt=clamp((ts-lastTs)/1000,.001,.05);lastTs=ts;fps=lerp(fps,1/dt,.05);
+  const t=ts/1000;
+  for(const n in EXPRS){const tg=exprTarget[n]?1:0;exprW[n]=clamp((exprW[n]||0)+(tg?dt*7:-dt*7),0,1);}
+  sampleLip(dt);
+
+  if(idleOn){
+    if(followOn){
+      const tx=clamp((mx-.5)*28,-14,14),ty=clamp((.42-my)*26,-12,12),tz=clamp((mx-.5)*16,-8,8);
+      if(idleOwned.ParamAngleX)P.ParamAngleX=lerp(P.ParamAngleX,tx,dt*4);
+      if(idleOwned.ParamAngleY)P.ParamAngleY=lerp(P.ParamAngleY,ty,dt*4);
+      if(idleOwned.ParamAngleZ)P.ParamAngleZ=lerp(P.ParamAngleZ,tz,dt*4);
+      if(idleOwned.ParamEyeBallX)P.ParamEyeBallX=lerp(P.ParamEyeBallX,clamp((mx-.5)*2.4,-1,1),dt*5);
+      if(idleOwned.ParamEyeBallY)P.ParamEyeBallY=lerp(P.ParamEyeBallY,clamp((.42-my)*2.4,-1,1),dt*5);
+    } else ['ParamAngleX','ParamAngleY','ParamAngleZ','ParamEyeBallX','ParamEyeBallY'].forEach(id=>{if(idleOwned[id])P[id]=lerp(P[id],0,dt*3);});
+    if(idleOwned.ParamBreath)P.ParamBreath=.5+.5*Math.sin(t*1.4);
+    blinkT-=dt;if(blinkT<0)blinkT=1.8+Math.random()*3.2;
+    const BD=.16; blinkV=blinkT<BD?clamp(Math.abs((BD-blinkT)/BD*2-1),0,1):1;
+  } else blinkV=1;
+
+  const D={};
+  for(const p of CDI.Parameters){let v=blendExpr(P[p.Id],p.Id);
+    if(p.Id==='ParamEyeLOpen'||p.Id==='ParamEyeROpen')v*=blinkV; D[p.Id]=v;}
+  D.ParamMouthOpenY=clamp(Math.max(D.ParamMouthOpenY,lipLevel),0,1);
+
+  const hRot=D.ParamAngleZ*R, headVel=(hRot-prevHead)/Math.max(dt,.001); prevHead=hRot;
+  const wind=physOn?(D.ParamAccX*.5+D.ParamBodyAngleX*.04+headVel*.9):0;
+  if(physOn){
+    hairV+=(-hairA*26-hairV*3.2+wind*8-headVel*.6)*dt; hairA=clamp(hairA+hairV*dt,-.5,.5);
+    P.ParamHairX=clamp(hairA*40,-30,30); P.ParamHairY=clamp(hairV*8,-30,30);
+    P.ParamScarfX=clamp(hairA*20,-30,30); P.ParamScarfY=clamp(hairV*4,-30,30);
+    P.ParamVestX=clamp(-D.ParamBodyAngleX*.6,-30,30); P.ParamVestY=clamp(D.ParamBreath*1.5,0,30);
+  }
+
+  /* render */
+  ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H); drawBackdrop();
+  const s=Math.min(W/1250,H/1120);
+  ctx.save(); ctx.translate(W/2,H/2+10); ctx.scale(s,s); ctx.translate(-960,-610);
+
+  const bx=D.ParamBodyAngleX/10*16, by=-D.ParamBodyAngleY/15*10-D.ParamBreath*3, bz=D.ParamBodyAngleZ/10*.08;
+  const [BPX,BPY]=PIV.body;
+
+  // body
+  piv(BPX+bx,BPY+by,bz,1,1+D.ParamBreath*.012,()=>drawL('Body'));
+  // arms
+  for(const side of[-1,1]){
+    const pre=side<0?'R':'L';
+    const az=blendExpr(P['ParamArm'+pre+'Z'],'ParamArm'+pre+'Z');
+    const ay=blendExpr(P['ParamArm'+pre+'Y'],'ParamArm'+pre+'Y');
+    const ax=blendExpr(P['ParamArm'+pre+'X'],'ParamArm'+pre+'X');
+    const rot=az*1.1*R+(side>0?ay:-ay)*1.5*R;
+    const [sx,sy]=side<0?PIV.shoL:PIV.shoR;
+    piv(BPX+bx,BPY+by,bz,1,1,()=>piv(sx,sy,rot,1,1,()=>{ctx.save();ctx.translate(-side*ax*.6,0);drawL('Arm'+pre);ctx.restore();}));
+  }
+  // head group
+  const [HPX,HPY]=PIV.head;
+  const hx=D.ParamAngleX/30*36, hy=-D.ParamAngleY/30*26, hz=D.ParamAngleZ/30*.38;
+  piv(HPX+bx*.8,HPY+by*.6,hz,1,1,()=>{
+    ctx.save();ctx.translate(hx,hy);
+    drawL('Face');
+    for(const side of[-1,1]){
+      const pre=side<0?'R':'L';
+      const open=clamp(D['ParamEye'+pre+'Open'],0,1.15), smile=clamp(D.ParamEyeSmile,0,1);
+      const [ex,ey]=side<0?PIV.eyeL:PIV.eyeR;
+      const ox=ex+D.ParamEyeBallX*8, oy=ey-D.ParamEyeBallY*6;
+      if(smile>.55){ drawL('EyeSmile'+pre,smile); }
+      else{
+        if(open>.12) piv(ox,oy,0,1,Math.max(.06,open),()=>drawL('Eye'+pre));
+        drawL('EyeClose'+pre,clamp(1-open*5,0,1));
+      }
+      const byv=D['ParamBrow'+pre+'Y'], ba=D['ParamBrow'+pre+'Angle'];
+      const [bxr,byr]=side<0?PIV.browL:PIV.browR;
+      piv(bxr,byr,side*ba*.3,1,1,()=>{ctx.save();ctx.translate(0,-byv*11);drawL('Brow'+pre);ctx.restore();});
+    }
+    const mopen=clamp(D.ParamMouthOpenY,0,1), mform=D.ParamMouthForm;
+    const [mpx,mpy]=PIV.mouth;
+    piv(mpx,mpy,mform*.06,1,1,()=>{
+      drawL('Mouth',clamp(1-mopen*2.2,0,1));
+      if(mopen>.04) piv(mpx,mpy,0,1,.35+.65*mopen,()=>drawL('MouthOpen'));
+    });
+    // hair with sway pivot near top of head
+    piv(960,255,hairA*.4,1,1,()=>drawL('Hair'));
+    ctx.restore();
+  });
+  ctx.restore();
+
+  const wy=H/2+10+(1075-610)*s;
+  ctx.save();ctx.strokeStyle='rgba(200,170,94,.22)';ctx.setLineDash([10,8]);
+  ctx.beginPath();ctx.moveTo(W*.16,wy);ctx.lineTo(W*.84,wy);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='rgba(200,170,94,.4)';ctx.font='10px Consolas,monospace';
+  ctx.fillText('WAIST CROP',W*.16,wy+14);ctx.restore();
+
+  $('#lipMeter i').style.width=(lipLevel*100).toFixed(0)+'%';
+  for(const id in sliders){const sl=sliders[id];
+    if(document.activeElement===sl.inp)continue;
+    if(['ParamHairX','ParamHairY','ParamHairX2','ParamHairY2','ParamScarfX','ParamScarfY','ParamVestX','ParamVestY'].includes(id)){
+      sl.inp.value=P[id];sl.out.textContent=P[id].toFixed(1);sl.row.classList.add('auto');continue;}
+    if(idleOwned[id]&&idleOn){sl.inp.value=P[id];sl.out.textContent=P[id].toFixed(2);}}
+  $('#hud').innerHTML=`<b>WARDOGS_MALE</b> // assembled model<br>fps ${fps.toFixed(0)} · ${CDI.Parameters.length} params · ${Object.keys(AMAP.layers).length} layers<br>lipsync: <b>${lipSrc}</b> ${lipSrc!=='off'?'lvl '+lipLevel.toFixed(2):''} · physics ${physOn?'ON':'OFF'}`;
+}
+function drawBackdrop(){
+  ctx.strokeStyle='rgba(120,140,160,.05)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=48){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=48){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.save();ctx.globalAlpha=.1;
+  for(let i=0;i<6;i++){ctx.fillStyle=i%2?'#c8aa5e':'#b8452f';ctx.save();ctx.translate(30+i*26,26);ctx.rotate(-.6);ctx.fillRect(0,0,14,90);ctx.restore();}
+  ctx.restore();
+  ctx.fillStyle='rgba(200,170,94,.16)';ctx.font='bold 42px Consolas,monospace';
+  ctx.fillText('WD-M01',W-210,H-26);
+}
+
+(async()=>{resize();await loadAll();
+  if(!CDI||!AMAP){$('#hud').textContent='LOAD FAILED';return;}
+  buildUI();requestAnimationFrame(frame);})();
+</script>
+</body>
+</html>

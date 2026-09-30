@@ -1,0 +1,11 @@
+{
+    "Type": "Live2D Expression",
+    "Parameters": [
+        { "Id": "ParamArmLX", "Value": 22.0, "Blend": "Add" },
+        { "Id": "ParamArmLZ", "Value": 18.0, "Blend": "Add" },
+        { "Id": "ParamArmRX", "Value": -22.0, "Blend": "Add" },
+        { "Id": "ParamArmRZ", "Value": -18.0, "Blend": "Add" },
+        { "Id": "ParamHandL", "Value": 1.0, "Blend": "Add" },
+        { "Id": "ParamHandR", "Value": 1.0, "Blend": "Add" }
+    ]
+}
