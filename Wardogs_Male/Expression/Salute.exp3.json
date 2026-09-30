@@ -1,0 +1,10 @@
+{
+    "Type": "Live2D Expression",
+    "Parameters": [
+        { "Id": "ParamArmRX", "Value": -8.0, "Blend": "Add" },
+        { "Id": "ParamArmRY", "Value": -26.0, "Blend": "Add" },
+        { "Id": "ParamArmRZ", "Value": 24.0, "Blend": "Add" },
+        { "Id": "ParamHandR", "Value": 1.0, "Blend": "Add" },
+        { "Id": "ParamFingerR", "Value": 1.0, "Blend": "Add" }
+    ]
+}
