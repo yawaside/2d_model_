@@ -18,13 +18,19 @@ OUT = os.path.join(ROOT, 'Wardogs_Male')
 
 def key_magenta(im):
     """Remove magenta chroma AND baked-in checkerboard backgrounds via
-    flood-fill from the image borders through background-like pixels."""
+    flood-fill from the image borders through background-like pixels.
+
+    The key colour is a *bright* magenta (~253,0,248). Some artwork is a *dark*
+    maroon that also satisfies (r>g+18)&(b>g+18) -- the eye_smile arc is
+    (39,6,31) -- so the magenta test needs a brightness gate, otherwise the
+    keyer eats the art and leaves a 4px smudge.
+    """
     from collections import deque
     im = im.convert('RGBA')
     a = np.asarray(im).astype(np.int32)
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
-    magenta = (r > g + 18) & (b > g + 18)          # any magenta/pink glow
-    grey = (np.abs(r - g) < 16) & (np.abs(g - b) < 16) & (r >= 55)  # baked checker grays
+    magenta = (r > g + 18) & (b > g + 18) & (r > 90)     # bright key only
+    grey = (np.abs(r - g) < 16) & (np.abs(g - b) < 16) & (r >= 100)  # light checker
     bglike = magenta | grey
     hgt, wid = bglike.shape
     seen = np.zeros_like(bglike)
@@ -59,6 +65,20 @@ def key_magenta(im):
                     comp[ny, nx] = 1
                     dq.append((ny, nx))
         a[..., 3] = np.where(comp, a[..., 3], 0)
+    # The key leaves a 1px magenta halo where the antialiased edge blended
+    # into the background; erode it away, then fully neutralise any spill.
+    m = a[..., 3] > 0
+    e = m.copy()
+    e[1:, :] &= m[:-1, :]
+    e[:-1, :] &= m[1:, :]
+    e[:, 1:] &= m[:, :-1]
+    e[:, :-1] &= m[:, 1:]
+    a[..., 3] = np.where(e, a[..., 3], 0)
+    spill = np.minimum(a[..., 0], a[..., 2]) - a[..., 1]
+    cut = np.where(spill > 0, spill, 0).astype(np.int32)
+    a[..., 0] -= cut
+    a[..., 2] -= cut
+    np.clip(a[..., :3], 0, 255, out=a[..., :3])
     return Image.fromarray(a.astype(np.uint8), 'RGBA')
 
 def load(name):
@@ -97,8 +117,11 @@ def build():
 
     im = layer(); place(im, fit(P['torso'], width=470), 960, 898); L['Body'] = im
 
-    im = layer(); place(im, fit(P['arm'], height=330), SHO_L[0], 815, mirror=True); L['ArmR'] = im
-    im = layer(); place(im, fit(P['arm'], height=330), SHO_R[0], 815); L['ArmL'] = im
+    # arm.png is the character's RIGHT arm (back of hand to camera, thumb
+    # pointing medially). The character faces us, so his right side is screen
+    # LEFT (SHO_L) and the mirrored copy is the left arm on SHO_R.
+    im = layer(); place(im, fit(P['arm'], height=330), SHO_L[0], 815); L['ArmR'] = im
+    im = layer(); place(im, fit(P['arm'], height=330), SHO_R[0], 815, mirror=True); L['ArmL'] = im
 
     im = layer(); place(im, fit(P['face_base'], width=340), *HEAD); L['Face'] = im
 
@@ -124,8 +147,12 @@ def build():
              'EyeSmileL', 'EyeSmileR', 'BrowL', 'BrowR', 'Mouth', 'MouthOpen', 'Hair']
     return L, ORDER
 
+# The head must rotate about the neck joint (where it meets the collar), not
+# about its own centre, otherwise it swings off the shoulders when turned.
+NECK = (HEAD[0], 636)
+
 PIVOTS = {
-    'head': list(HEAD), 'body': list(BODY_PIV),
+    'head': list(HEAD), 'neck': list(NECK), 'body': list(BODY_PIV),
     'eyeL': list(EYE_L), 'eyeR': list(EYE_R),
     'browL': list(BROW_L), 'browR': list(BROW_R),
     'mouth': list(MOUTH), 'shoL': list(SHO_L), 'shoR': list(SHO_R),
@@ -161,7 +188,11 @@ def main():
         if x + crop.width > AW - 8:
             x, y, row_h = 8, y + row_h + pad, 0
         atlas.paste(crop, (x, y))
-        amap[n] = {'x': x, 'y': y, 'w': crop.width, 'h': crop.height}
+        # bb is the part's bbox on the 1920x1080 canvas; keep it so the viewer
+        # can place the layer back where the art was composed (x/y are the
+        # packed atlas position, dx/dy the canvas position).
+        amap[n] = {'x': x, 'y': y, 'w': crop.width, 'h': crop.height,
+                   'dx': bb[0], 'dy': bb[1]}
         x += crop.width + pad
         row_h = max(row_h, crop.height)
     tex = os.path.join(OUT, 'wardogs_male.4096')
