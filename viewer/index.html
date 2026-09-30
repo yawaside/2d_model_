@@ -75,10 +75,12 @@
       <div class="sec">PARAMETERS (cdi3.json)</div>
       <div id="groups"></div>
       <div class="note">
-        Renders the layered art of <b>wardogs_male.psd</b> (разрезка) packed into
-        <b>texture_00.png</b>; rig pivots and layer rects come from <b>atlas_map.json</b>.
+        Renders the layered art of <b>wardogs_male.psd</b> packed into a single
+        <b>texture_00.png</b>; rig pivots and layer rects come from
+        <b>atlas_map.json</b> (<i>dx/dy</i> = position on the 1920×1080 canvas).
         Lip sync drives <b>ParamMouthOpenY</b> from audio amplitude (demo voice / mic / file).
-        Binary <b>.moc3</b> mesh is compiled from the same PSD in Cubism Editor.
+        <b>Note:</b> this repo ships no <b>.moc3</b> — the rig is drawn by this viewer,
+        not by a Cubism runtime. See <b>README.md</b>.
       </div>
     </div>
   </div>
@@ -217,8 +219,9 @@ $('#stage').addEventListener('mousemove',e=>{const r=$('#stage').getBoundingClie
 
 function drawL(name,alpha){
   const r=AMAP.layers[name]; if(!r)return;
+  const dx=r.dx!==undefined?r.dx:r.x, dy=r.dy!==undefined?r.dy:r.y;
   if(alpha!==undefined)ctx.globalAlpha=alpha;
-  ctx.drawImage(TEX,r.x,r.y,r.w,r.h,r.x,r.y,r.w,r.h);
+  ctx.drawImage(TEX,r.x,r.y,r.w,r.h,dx,dy,r.w,r.h);
   ctx.globalAlpha=1;
 }
 function piv(px,py,rot,sx,sy,fn){ctx.save();ctx.translate(px,py);if(rot)ctx.rotate(rot);ctx.scale(sx,sy);ctx.translate(-px,-py);fn();ctx.restore();}
@@ -253,10 +256,13 @@ function frame(ts){
 
   const hRot=D.ParamAngleZ*R, headVel=(hRot-prevHead)/Math.max(dt,.001); prevHead=hRot;
   const wind=physOn?(D.ParamAccX*.5+D.ParamBodyAngleX*.04+headVel*.9):0;
+  const windY=physOn?(D.ParamAccY*.5+D.ParamBodyAngleY*.05-headVel*.6):0;
   if(physOn){
     hairV+=(-hairA*26-hairV*3.2+wind*8-headVel*.6)*dt; hairA=clamp(hairA+hairV*dt,-.5,.5);
-    P.ParamHairX=clamp(hairA*40,-30,30); P.ParamHairY=clamp(hairV*8,-30,30);
-    P.ParamScarfX=clamp(hairA*20,-30,30); P.ParamScarfY=clamp(hairV*4,-30,30);
+    const sway=hairV*8+windY*6;
+    P.ParamHairX=clamp(hairA*40,-30,30); P.ParamHairY=clamp(sway,-30,30);
+    P.ParamHairX2=clamp(hairA*22,-30,30); P.ParamHairY2=clamp(sway*.6,-30,30);
+    P.ParamScarfX=clamp(hairA*20,-30,30); P.ParamScarfY=clamp(sway*.5,-30,30);
     P.ParamVestX=clamp(-D.ParamBodyAngleX*.6,-30,30); P.ParamVestY=clamp(D.ParamBreath*1.5,0,30);
   }
 
@@ -280,9 +286,9 @@ function frame(ts){
     const [sx,sy]=side<0?PIV.shoL:PIV.shoR;
     piv(BPX+bx,BPY+by,bz,1,1,()=>piv(sx,sy,rot,1,1,()=>{ctx.save();ctx.translate(-side*ax*.6,0);drawL('Arm'+pre);ctx.restore();}));
   }
-  // head group
-  const [HPX,HPY]=PIV.head;
-  const hx=D.ParamAngleX/30*36, hy=-D.ParamAngleY/30*26, hz=D.ParamAngleZ/30*.38;
+  // head group — rotates about the NECK joint so the head stays on the collar
+  const [HPX,HPY]=PIV.neck||PIV.head;
+  const hx=D.ParamAngleX/30*26, hy=-D.ParamAngleY/30*20, hz=D.ParamAngleZ/30*.22;
   piv(HPX+bx*.8,HPY+by*.6,hz,1,1,()=>{
     ctx.save();ctx.translate(hx,hy);
     drawL('Face');
@@ -306,8 +312,14 @@ function frame(ts){
       drawL('Mouth',clamp(1-mopen*2.2,0,1));
       if(mopen>.04) piv(mpx,mpy,0,1,.35+.65*mopen,()=>drawL('MouthOpen'));
     });
-    // hair with sway pivot near top of head
-    piv(960,255,hairA*.4,1,1,()=>drawL('Hair'));
+    // Hair rides with the head (same transform, no independent pivot that
+    // would make it lag behind the skull and read as a stuck-on wig).
+    // ParamHairX/Y and the deeper X2/Y2 add a small secondary sway.
+    const hdx=P.ParamHairX*.12+P.ParamHairX2*.07;
+    const hdy=P.ParamHairY*.08+P.ParamHairY2*.05;
+    ctx.save();ctx.translate(hdx,hdy);
+    piv(960,330,hdy*.006+hairA*.06,1,1,()=>drawL('Hair'));
+    ctx.restore();
     ctx.restore();
   });
   ctx.restore();
